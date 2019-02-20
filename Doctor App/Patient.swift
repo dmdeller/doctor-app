@@ -10,6 +10,45 @@ import UIKit
 
 class Patient: NSObject {
     
+    // MARK: - Types
+    
+    static let errorDomain = "org.horizon-nigh.doctor-app.error-domain.patient"
+    
+    enum errorCode: Int {
+        case missingRequiredProperty
+        case unknownStatusValue
+    }
+    
+    enum errorUserInfoKey: String {
+        case missingRequiredPropertyName = "missingRequiredPropertyName"
+        case invalidValue = "invalidValue"
+    }
+    
+    enum Status: String {
+        case archived = "archived"
+        case inTreatment = "in_treatment"
+        case brandNew = "brand_new"
+        
+        static let displayNames: [Status: String] = [
+            .archived: "Archived",
+            .inTreatment: "In Treatment",
+            .brandNew: "Brand New",
+        ]
+        
+        var displayName: String {
+            return type(of: self).displayNames[self]!
+        }
+    }
+    
+    // MARK: - Properties
+    
+    var first: String
+    var last: String
+    var status: Status
+    var image: URL?
+    
+    // MARK: - Initializers
+    
     init(first: String, last: String, status: Status, image: URL? = nil) {
         self.first = first
         self.last = last
@@ -19,37 +58,38 @@ class Patient: NSObject {
     
     init(patientData: [String: String]) throws {
         guard let first = patientData["first"] else {
-            NSLog("no first name")
-            throw NSError(domain: "pretend I defined a domain here", code: 0, userInfo: nil)
+            throw type(of: self).error(forMissingKey: "first")
         }
         guard let last = patientData["last"] else {
-            NSLog("no last name")
-            throw NSError(domain: "pretend I defined a domain here", code: 0, userInfo: nil)
+            throw type(of: self).error(forMissingKey: "last")
         }
-        guard let status = patientData["status"] else {
-            NSLog("no status name")
-            throw NSError(domain: "pretend I defined a domain here", code: 0, userInfo: nil)
+        guard let statusString = patientData["status"] else {
+            throw type(of: self).error(forMissingKey: "status")
+        }
+        guard let status = Status(rawValue: statusString) else {
+            throw NSError(domain: type(of: self).errorDomain, code: errorCode.unknownStatusValue.rawValue, userInfo: [
+                NSLocalizedDescriptionKey: "There was an error interpreting the patient data",
+                errorUserInfoKey.invalidValue.rawValue: statusString,
+            ])
         }
         
         self.first = first
         self.last = last
-        self.status = Status(rawValue: status)!
+        self.status = status
         
         if let imageURLString = patientData["image"] {
             self.image = URL(string: imageURLString)
         }
     }
     
-    enum Status: String {
-        case archived = "archived"
-        case inTreatment = "in_treatment"
-        case brandNew = "brand_new"
+    // MARK: -
+    
+    static func error(forMissingKey key: String) -> Error {
+        return NSError(domain: errorDomain, code: errorCode.missingRequiredProperty.rawValue, userInfo: [
+            NSLocalizedDescriptionKey: "There was an error interpreting the patient data",
+            errorUserInfoKey.missingRequiredPropertyName.rawValue: key,
+        ])
     }
-
-    var first: String
-    var last: String
-    var status: Status
-    var image: URL?
     
     class var allPatientsData: [[String: String]] {
         return [

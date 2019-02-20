@@ -17,7 +17,8 @@ class PatientCell: UITableViewCell {
     
     override func awakeFromNib() {
         super.awakeFromNib()
-        // Initialization code
+        
+        patientImageView.image = nil
     }
 
     override func setSelected(_ selected: Bool, animated: Bool) {
